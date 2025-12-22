@@ -405,6 +405,7 @@ MigrationBackup/
 **/.ionide/
 **/Migrations/
 **/CLAUDE.md/
+**/claude.md/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd

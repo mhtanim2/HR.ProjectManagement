@@ -6,8 +6,6 @@ using HR.ProjectManagement.Services;
 using HR.ProjectManagement.Services.Interfaces;
 using HR.ProjectManagement.Utils;
 using HR.ProjectManagement.Validations.UserValidations;
-using HR.ProjectManagement.Validations.TeamValidations;
-using HR.ProjectManagement.Validations.TaskValidations;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +29,10 @@ public static class RegisterDependencyInjection
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddHttpContextAccessor();
+
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -59,23 +61,16 @@ public static class RegisterDependencyInjection
             options.AddPolicy(SD.ManagerOrAdmin, p => p.RequireRole(SD.Manager, SD.Admin));
         });
 
-        // Register User services
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUserService, UserService>();
 
-        // Register Team services
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<ITeamService, TeamService>();
 
-        // Register Task services
         services.AddScoped<ITaskListRepository, TaskItemRepository>();
         services.AddScoped<ITaskItemService, TaskItemService>();
 
-        // Register FluentValidation validators
-        services.AddValidatorsFromAssemblyContaining<CreateUserValidation>();
-        services.AddValidatorsFromAssemblyContaining<CreateTeamValidation>();
-        services.AddValidatorsFromAssemblyContaining<CreateTaskValidation>();
-
+        services.AddValidatorsFromAssemblyContaining<LoginValidation>();
         return services;
     }
 }

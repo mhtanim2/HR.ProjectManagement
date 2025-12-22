@@ -1,11 +1,6 @@
-﻿using HR.ProjectManagement.Contracts.Identity;
-using HR.ProjectManagement.DataContext;
-using HR.ProjectManagement.Entities;
+﻿using HR.ProjectManagement.DTOs;
+using HR.ProjectManagement.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace HR.ProjectManagement.Controllers;
 
@@ -13,59 +8,71 @@ namespace HR.ProjectManagement.Controllers;
 [ApiController]
 public class AuthController : ControllerBase
 {
-    private readonly ApplicationDBContext _db;
-    private readonly IPasswordHasher _passwordHasher;
-    private readonly IConfiguration _config;
+    private readonly IAuthService _authService;
 
-    public AuthController(
-        ApplicationDBContext db,
-        IPasswordHasher passwordHasher,
-        IConfiguration config)
+    public AuthController(IAuthService authService)
     {
-        _db = db;
-        _passwordHasher = passwordHasher;
-        _config = config;
+        _authService = authService;
     }
 
     [HttpPost("login")]
-    public IActionResult Login(DTOs.LoginRequest request)
+    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
-        var user = _db.Users.SingleOrDefault(u => u.Email == request.Email);
-        if (user == null)
-            return Unauthorized("Invalid credentials");
-
-        if (!_passwordHasher.Verify(request.Password, user.PasswordHash))
-            return Unauthorized("Invalid credentials");
-
-        var token = GenerateJwt(user);
-        return Ok(new { accessToken = token });
+        try
+        {
+            var loginResponse = await _authService.LoginAsync(request);
+            return Ok(loginResponse);
+        }
+        catch (HR.ProjectManagement.Exceptions.AuthenticationException ex)
+        {
+            return Unauthorized(ex.Message);
+        }
     }
 
-    private string GenerateJwt(User user)
+    [HttpPost("refresh")]
+    public async Task<ActionResult<RefreshTokenResponse>> RefreshToken([FromBody] RefreshTokenRequest request)
     {
-        var claims = new List<Claim>
+        try
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role.ToString())
-        };
+            var response = await _authService.RefreshTokenAsync(request);
+            return Ok(response);
+        }
+        catch (HR.ProjectManagement.Exceptions.AuthenticationException ex)
+        {
+            return Unauthorized(ex.Message);
+        }
+        catch (HR.ProjectManagement.Exceptions.TokenExpiredException ex)
+        {
+            return Unauthorized(ex.Message);
+        }
+        catch (HR.ProjectManagement.Exceptions.UnauthorizedException ex)
+        {
+            return Unauthorized(ex.Message);
+        }
+    }
 
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Key"]!)
-        );
+    [HttpPost("logout")]
+    public async Task<ActionResult> Logout([FromBody] RefreshTokenRequest request)
+    {
+        await _authService.LogoutAsync(request.RefreshToken);
+        return Ok(new { message = "Logged out successfully" });
+    }
 
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+    [HttpPost("forgot-password")]
+    public async Task<ActionResult<ForgotPasswordResponse>> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        var response = await _authService.ForgotPasswordAsync(request);
+        return Ok(response);
+    }
 
-        var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(
-                int.Parse(_config["Jwt:AccessTokenMinutes"]!)
-            ),
-            signingCredentials: creds
-        );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+    [HttpPost("reset-password")]
+    public async Task<ActionResult<ResetPasswordResponse>> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var response = await _authService.ResetPasswordAsync(request);
+        if (!response.Success)
+        {
+            return BadRequest(response);
+        }
+        return Ok(response);
     }
 }

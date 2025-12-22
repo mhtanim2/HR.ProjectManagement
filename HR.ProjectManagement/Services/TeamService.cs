@@ -49,7 +49,6 @@ public class TeamService : ITeamService
 
     public async Task<TeamResponse> UpdateAsync(int id, UpdateTeamRequest request)
     {
-        // Validate input
         var validationResult = await _updateTeamValidator.ValidateAsync(request);
         if (!validationResult.IsValid)
             throw new BadRequestException("Validation failed", validationResult);
@@ -57,14 +56,9 @@ public class TeamService : ITeamService
         var existingTeam = await _teamRepository.GetByIdAsync(id);
         if (existingTeam == null)
             throw new NotFoundException("Team", id);
-
-        // Check if name is already used by another team
         if (await _teamRepository.GetByNameAsync(request.Name) != null && existingTeam.Name != request.Name)
-        {
             throw new BadRequestException($"Team name '{request.Name}' is already in use by another team");
-        }
 
-        // Update properties
         existingTeam.Name = request.Name;
         existingTeam.Description = request.Description;
 
@@ -79,13 +73,9 @@ public class TeamService : ITeamService
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
             throw new NotFoundException("Team", id);
-
-        // Check if team has tasks (business rule: cannot delete team with active tasks)
         var teamWithTasks = await _teamRepository.GetWithTasksAsync(id);
         if (teamWithTasks?.Tasks.Any() == true)
-        {
             throw new BadRequestException("Cannot delete team with existing tasks. Please reassign or delete tasks first.");
-        }
 
         await _teamRepository.DeleteAsync(team);
         await _unitOfWork.SaveChangesAsync();

@@ -403,6 +403,8 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 **/.ionide/
+**/Migrations/
+**/CLAUDE.md/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd

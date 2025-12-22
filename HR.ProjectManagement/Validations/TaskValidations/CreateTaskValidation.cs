@@ -39,7 +39,6 @@ public class CreateTaskValidation : AbstractValidator<CreateTaskRequest>
         RuleFor(x => x.CreatedByUserId)
             .GreaterThan(0).WithMessage("Created by user ID is required");
 
-        // Business validation: Assigned user must be member of the team
         RuleFor(x => x)
             .MustAsync(async (request, cancellation) =>
             {

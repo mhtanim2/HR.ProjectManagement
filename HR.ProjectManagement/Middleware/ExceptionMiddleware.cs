@@ -46,6 +46,17 @@ public class ExceptionMiddleware
                     Errors = badRequestException.ValidationErrors
                 };
                 break;
+            case ValidationException validationException:
+                statusCode = HttpStatusCode.BadRequest;
+                problem = new CustomProblemDetails
+                {
+                    Title = validationException.Message,
+                    Status = (int)statusCode,
+                    Detail = validationException.InnerException?.Message,
+                    Type = nameof(ValidationException),
+                    Errors = validationException.ValidationErrors
+                };
+                break;
             case NotFoundException NotFound:
                 statusCode = HttpStatusCode.NotFound;
                 problem = new CustomProblemDetails
@@ -54,6 +65,36 @@ public class ExceptionMiddleware
                     Status = (int)statusCode,
                     Type = nameof(NotFoundException),
                     Detail = NotFound.InnerException?.Message,
+                };
+                break;
+            case AuthenticationException authenticationException:
+                statusCode = HttpStatusCode.Unauthorized;
+                problem = new CustomProblemDetails
+                {
+                    Title = authenticationException.Message,
+                    Status = (int)statusCode,
+                    Type = nameof(AuthenticationException),
+                    Detail = authenticationException.InnerException?.Message,
+                };
+                break;
+            case UnauthorizedException unauthorizedException:
+                statusCode = HttpStatusCode.Unauthorized;
+                problem = new CustomProblemDetails
+                {
+                    Title = unauthorizedException.Message,
+                    Status = (int)statusCode,
+                    Type = nameof(UnauthorizedException),
+                    Detail = unauthorizedException.InnerException?.Message,
+                };
+                break;
+            case TokenExpiredException tokenExpiredException:
+                statusCode = HttpStatusCode.Unauthorized;
+                problem = new CustomProblemDetails
+                {
+                    Title = tokenExpiredException.Message,
+                    Status = (int)statusCode,
+                    Type = nameof(TokenExpiredException),
+                    Detail = tokenExpiredException.InnerException?.Message,
                 };
                 break;
             default:

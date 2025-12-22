@@ -15,4 +15,5 @@ public class User : BaseEntity
     public ICollection<TeamMember> TeamMemberships { get; set; } = new List<TeamMember>();
     public ICollection<TaskItem> AssignedTasks { get; set; } = new List<TaskItem>();
     public ICollection<TaskItem> CreatedTasks { get; set; } = new List<TaskItem>();
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }

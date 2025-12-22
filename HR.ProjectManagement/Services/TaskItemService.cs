@@ -37,33 +37,24 @@ public class TaskItemService : ITaskItemService
 
     public async Task<TaskResponse> CreateAsync(CreateTaskRequest request)
     {
-        // Validate input
         var validationResult = await _createTaskValidator.ValidateAsync(request);
         if (!validationResult.IsValid)
             throw new BadRequestException("Validation failed", validationResult);
 
-        // Validate assigned user exists
         var assignedUser = await _userRepository.GetByIdAsync(request.AssignedToUserId);
         if (assignedUser == null)
             throw new BadRequestException($"Assigned user with ID {request.AssignedToUserId} does not exist");
 
-        // Validate team exists
         var team = await _teamRepository.GetByIdAsync(request.TeamId);
         if (team == null)
             throw new BadRequestException($"Team with ID {request.TeamId} does not exist");
 
-        // Business validation: assigned user must be member of the team
         var teamWithMembers = await _teamRepository.GetWithMembersAsync(request.TeamId);
         if (teamWithMembers?.Members.All(m => m.UserId != request.AssignedToUserId) == true)
-        {
             throw new BadRequestException($"User {assignedUser.FullName} is not a member of team {team.Name}");
-        }
 
-        // Validate due date is in the future
         if (request.DueDate <= DateTime.UtcNow)
-        {
             throw new BadRequestException("Due date must be in the future");
-        }
 
         var task = new TaskItem
         {
@@ -84,7 +75,6 @@ public class TaskItemService : ITaskItemService
 
     public async Task<TaskResponse> UpdateAsync(int id, UpdateTaskRequest request)
     {
-        // Validate input
         var validationResult = await _updateTaskValidator.ValidateAsync(request);
         if (!validationResult.IsValid)
             throw new BadRequestException("Validation failed", validationResult);
@@ -93,7 +83,6 @@ public class TaskItemService : ITaskItemService
         if (existingTask == null)
             throw new NotFoundException("Task", id);
 
-        // Validate assigned user if provided
         if (request.AssignedToUserId.HasValue)
         {
             var assignedUser = await _userRepository.GetByIdAsync(request.AssignedToUserId.Value);
@@ -101,31 +90,23 @@ public class TaskItemService : ITaskItemService
                 throw new BadRequestException($"Assigned user with ID {request.AssignedToUserId.Value} does not exist");
         }
 
-        // Validate team if provided
         if (request.TeamId.HasValue)
         {
             var team = await _teamRepository.GetByIdAsync(request.TeamId.Value);
             if (team == null)
                 throw new BadRequestException($"Team with ID {request.TeamId.Value} does not exist");
 
-            // If assigned user and team are both provided, validate team membership
             if (request.AssignedToUserId.HasValue)
             {
                 var teamWithMembers = await _teamRepository.GetWithMembersAsync(request.TeamId.Value);
                 if (teamWithMembers?.Members.All(m => m.UserId != request.AssignedToUserId.Value) == true)
-                {
                     throw new BadRequestException($"Assigned user is not a member of the specified team");
-                }
             }
         }
 
-        // Validate due date is in the future
         if (request.DueDate <= DateTime.UtcNow)
-        {
             throw new BadRequestException("Due date must be in the future");
-        }
 
-        // Update properties
         existingTask.Title = request.Title;
         existingTask.Description = request.Description;
         existingTask.Status = request.Status;
@@ -149,11 +130,8 @@ public class TaskItemService : ITaskItemService
         if (task == null)
             throw new NotFoundException("Task", id);
 
-        // Validate status transition (business rule)
         if (task.Status == Status.Done && request.Status != Status.Done)
-        {
             throw new BadRequestException("Cannot change status from Done to other statuses");
-        }
 
         task.Status = request.Status;
 

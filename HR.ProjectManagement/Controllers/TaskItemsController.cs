@@ -21,9 +21,8 @@ public class TaskItemsController : ControllerBase
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
-        {
             throw new UnauthorizedAccessException("User ID not found in token");
-        }
+        
         return userId;
     }
 
@@ -31,7 +30,6 @@ public class TaskItemsController : ControllerBase
     [Authorize(Policy = "ManagerOrAdmin")]
     public async Task<ActionResult<TaskResponse>> Create([FromBody] CreateTaskRequest request)
     {
-        // Set the CreatedByUserId from current user
         request.CreatedByUserId = GetCurrentUserId();
         var task = await _taskItemService.CreateAsync(request);
         return CreatedAtAction(nameof(GetById), new { id = task.Id }, task);
@@ -51,9 +49,7 @@ public class TaskItemsController : ControllerBase
     {
         var task = await _taskItemService.GetByIdAsync(id);
         if (task == null)
-        {
             return NotFound();
-        }
         return Ok(task);
     }
 
@@ -63,9 +59,7 @@ public class TaskItemsController : ControllerBase
     {
         var task = await _taskItemService.GetWithDetailsAsync(id);
         if (task == null)
-        {
             return NotFound();
-        }
         return Ok(task);
     }
 
@@ -81,20 +75,14 @@ public class TaskItemsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<TaskResponse>> UpdateStatus(int id, [FromBody] UpdateTaskStatusRequest request)
     {
-        // Get current user to check if they can update the status
         var currentUserId = GetCurrentUserId();
         var task = await _taskItemService.GetByIdAsync(id);
 
         if (task == null)
-        {
             return NotFound();
-        }
 
-        // Check if user is assigned to this task or is Manager/Admin
         if (task.AssignedToUserId != currentUserId && !User.IsInRole("Manager") && !User.IsInRole("Admin"))
-        {
             return Forbid();
-        }
 
         var updatedTask = await _taskItemService.UpdateStatusAsync(id, request);
         return Ok(updatedTask);

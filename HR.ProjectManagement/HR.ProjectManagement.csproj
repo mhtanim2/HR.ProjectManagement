@@ -10,9 +10,13 @@
 
   <ItemGroup>
     <Compile Remove="Features\**" />
+    <Compile Remove="Validations\TaskListValidations\**" />
     <Content Remove="Features\**" />
+    <Content Remove="Validations\TaskListValidations\**" />
     <EmbeddedResource Remove="Features\**" />
+    <EmbeddedResource Remove="Validations\TaskListValidations\**" />
     <None Remove="Features\**" />
+    <None Remove="Validations\TaskListValidations\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,7 +45,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Validations\TaskListValidations\" />
     <Folder Include="Validations\TeamValidations\" />
   </ItemGroup>
 

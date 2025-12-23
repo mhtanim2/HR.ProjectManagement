@@ -23,7 +23,6 @@ public static class SD
     public const string EmployeeEmail = "Employee@demo.com";
     public const string EmployeeFullname = "Employee User";
     public const string EmployeePasswordHash = "$2a$11$KbaFgoihjNW8m64tM40SUutX.GjVL9ME6CbSDYDE9NfZP.uxtTRBq";
-
 }
 /*
  Console.WriteLine(BCrypt.Net.BCrypt.HashPassword("Admin123!"));

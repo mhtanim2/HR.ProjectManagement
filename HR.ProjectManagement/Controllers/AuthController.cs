@@ -1,6 +1,7 @@
 ﻿using HR.ProjectManagement.DTOs;
 using HR.ProjectManagement.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Authentication;
 
 namespace HR.ProjectManagement.Controllers;
 
@@ -23,7 +24,7 @@ public class AuthController : ControllerBase
             var loginResponse = await _authService.LoginAsync(request);
             return Ok(loginResponse);
         }
-        catch (HR.ProjectManagement.Exceptions.AuthenticationException ex)
+        catch (AuthenticationException ex)
         {
             return Unauthorized(ex.Message);
         }
@@ -37,7 +38,7 @@ public class AuthController : ControllerBase
             var response = await _authService.RefreshTokenAsync(request);
             return Ok(response);
         }
-        catch (HR.ProjectManagement.Exceptions.AuthenticationException ex)
+        catch (AuthenticationException ex)
         {
             return Unauthorized(ex.Message);
         }

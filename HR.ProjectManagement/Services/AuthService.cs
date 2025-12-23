@@ -24,6 +24,7 @@ public class AuthService : IAuthService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IConfiguration _config;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IValidator<LoginRequest> _loginRequestValidator;
     private readonly IValidator<RefreshTokenRequest> _refreshTokenValidator;
     private readonly IValidator<ForgotPasswordRequest> _forgotPasswordValidator;
     private readonly IValidator<ResetPasswordRequest> _resetPasswordValidator;
@@ -35,6 +36,7 @@ public class AuthService : IAuthService
         IPasswordHasher passwordHasher,
         IConfiguration config,
         IUnitOfWork unitOfWork,
+        IValidator<LoginRequest> loginRequestValidator,
         IValidator<RefreshTokenRequest> refreshTokenValidator,
         IValidator<ForgotPasswordRequest> forgotPasswordValidator,
         IValidator<ResetPasswordRequest> resetPasswordValidator)
@@ -45,6 +47,7 @@ public class AuthService : IAuthService
         _passwordHasher = passwordHasher;
         _config = config;
         _unitOfWork = unitOfWork;
+        _loginRequestValidator = loginRequestValidator;
         _refreshTokenValidator = refreshTokenValidator;
         _forgotPasswordValidator = forgotPasswordValidator;
         _resetPasswordValidator = resetPasswordValidator;
@@ -52,6 +55,10 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
+        var validationResult = await _loginRequestValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            throw new AppValidationException("Login validation failed", validationResult);
+        
         var user = await ValidateUserCredentialsAsync(request.Email, request.Password);
         var token = await GenerateTokenAsync(user);
         var refreshToken = await GenerateRefreshTokenAsync(user);
@@ -85,31 +92,20 @@ public class AuthService : IAuthService
 
     public async Task<User> ValidateUserCredentialsAsync(string email, string password)
     {
-        var user = await FindUserByEmailAsync(email);
-
+        var user = await _userRepository.GetByEmailAsync(email);
+        
         if (user == null)
-        {
             throw new AuthenticationException(AuthConstants.InvalidCredentialsMessage);
-        }
 
-        if (!VerifyPassword(password, user.PasswordHash))
-        {
+        bool verifyPassword = _passwordHasher.Verify(password, user.PasswordHash);
+
+        if (!verifyPassword)
             throw new AuthenticationException(AuthConstants.InvalidCredentialsMessage);
-        }
 
         return user;
     }
 
-    private async Task<User?> FindUserByEmailAsync(string email)
-    {
-        return await _userRepository.GetByEmailAsync(email);
-    }
-
-    private bool VerifyPassword(string password, string passwordHash)
-    {
-        return _passwordHasher.Verify(password, passwordHash);
-    }
-
+    
     private List<Claim> CreateClaimsForUser(User user)
     {
         return new List<Claim>

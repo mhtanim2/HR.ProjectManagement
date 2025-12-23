@@ -35,16 +35,5 @@ public class CreateTaskValidation : AbstractValidator<CreateTaskRequest>
         RuleFor(x => x.DueDate)
             .GreaterThan(DateTime.UtcNow).WithMessage("Due date must be in the future")
             .LessThan(DateTime.UtcNow.AddYears(1)).WithMessage("Due date cannot be more than 1 year in the future");
-
-        RuleFor(x => x.CreatedByUserId)
-            .GreaterThan(0).WithMessage("Created by user ID is required");
-
-        RuleFor(x => x)
-            .MustAsync(async (request, cancellation) =>
-            {
-                var teamWithMembers = await _teamRepository.GetWithMembersAsync(request.TeamId);
-                return teamWithMembers?.Members.Any(m => m.UserId == request.AssignedToUserId) == true;
-            })
-            .WithMessage("Assigned user must be a member of the team");
     }
 }

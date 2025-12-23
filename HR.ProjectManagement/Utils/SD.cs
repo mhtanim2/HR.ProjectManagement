@@ -59,4 +59,6 @@ Unit testing (any framework)
 - FluentValidation for request validation 
 - Implement CQRS (Command Query Responsibility Segregation) 
 - Global exception handling via middleware 
+ 
+ Hi, didn't you seeded data for @Entities/Team.cs @Entities/TaskItem.cs @Entities/TeamMember.cs @DataContext/Configurations/TeamConfiguration.cs @DataContext/Configurations/TaskItemConfiguration.cs @DataContext/Configurations/TeamMemberConfiguration.cs 
  */

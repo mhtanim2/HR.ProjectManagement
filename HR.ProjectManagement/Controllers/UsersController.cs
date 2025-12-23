@@ -58,7 +58,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Policy = "ManagerOrAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<UserResponse>> Update(int id, [FromBody] UpdateUserRequest request)
     {
         var user = await _userService.UpdateAsync(id, request);

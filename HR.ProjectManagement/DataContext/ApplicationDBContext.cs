@@ -69,6 +69,22 @@ public class ApplicationDBContext : DbContext
 
         modelBuilder.Entity<PasswordReset>()
             .HasIndex(pr => new { pr.Email, pr.IsUsed });
+
+        // TaskItem indexes for search performance
+        modelBuilder.Entity<TaskItem>()
+            .HasIndex(t => t.Status);
+
+        modelBuilder.Entity<TaskItem>()
+            .HasIndex(t => t.DueDate);
+
+        modelBuilder.Entity<TaskItem>()
+            .HasIndex(t => t.AssignedToUserId);
+
+        modelBuilder.Entity<TaskItem>()
+            .HasIndex(t => t.TeamId);
+
+        modelBuilder.Entity<TaskItem>()
+            .HasIndex(t => new { t.Status, t.DueDate });
     }
 
 }

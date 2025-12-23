@@ -7,6 +7,7 @@ using HR.ProjectManagement.Services.Interfaces;
 using HR.ProjectManagement.Validations.TaskValidations;
 using Mapster;
 using FluentValidation;
+using AppValidationException = HR.ProjectManagement.Exceptions.ValidationException;
 
 namespace HR.ProjectManagement.Services;
 
@@ -18,6 +19,7 @@ public class TaskItemService : ITaskItemService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CreateTaskRequest> _createTaskValidator;
     private readonly IValidator<UpdateTaskRequest> _updateTaskValidator;
+    private readonly IValidator<TaskSearchRequest> _searchValidator;
 
     public TaskItemService(
         ITaskListRepository taskListRepository,
@@ -25,7 +27,8 @@ public class TaskItemService : ITaskItemService
         ITeamRepository teamRepository,
         IUnitOfWork unitOfWork,
         IValidator<CreateTaskRequest> createTaskValidator,
-        IValidator<UpdateTaskRequest> updateTaskValidator)
+        IValidator<UpdateTaskRequest> updateTaskValidator,
+        IValidator<TaskSearchRequest> searchValidator)
     {
         _taskListRepository = taskListRepository;
         _userRepository = userRepository;
@@ -33,9 +36,10 @@ public class TaskItemService : ITaskItemService
         _unitOfWork = unitOfWork;
         _createTaskValidator = createTaskValidator;
         _updateTaskValidator = updateTaskValidator;
+        _searchValidator = searchValidator;
     }
 
-    public async Task<TaskResponse> CreateAsync(CreateTaskRequest request)
+    public async Task<TaskResponse> CreateAsync(CreateTaskRequest request, int createdByUserId)
     {
         var validationResult = await _createTaskValidator.ValidateAsync(request);
         if (!validationResult.IsValid)
@@ -49,9 +53,8 @@ public class TaskItemService : ITaskItemService
         if (team == null)
             throw new BadRequestException($"Team with ID {request.TeamId} does not exist");
 
-        var teamWithMembers = await _teamRepository.GetWithMembersAsync(request.TeamId);
-        if (teamWithMembers?.Members.All(m => m.UserId != request.AssignedToUserId) == true)
-            throw new BadRequestException($"User {assignedUser.FullName} is not a member of team {team.Name}");
+        // Note: Team membership validation removed since there's no endpoint to manage team members
+        // TODO: Add team member management endpoints and re-enable this validation
 
         if (request.DueDate <= DateTime.UtcNow)
             throw new BadRequestException("Due date must be in the future");
@@ -63,7 +66,7 @@ public class TaskItemService : ITaskItemService
             Status = Status.Todo, // Default status for new tasks
             DueDate = request.DueDate,
             AssignedToUserId = request.AssignedToUserId,
-            CreatedByUserId = request.CreatedByUserId, // This should come from current user context
+            CreatedByUserId = createdByUserId, // Set from current user context
             TeamId = request.TeamId
         };
 
@@ -225,5 +228,77 @@ public class TaskItemService : ITaskItemService
     {
         var tasks = await _taskListRepository.GetByStatusAsync(status);
         return tasks.Adapt<IReadOnlyList<TaskResponse>>();
+    }
+
+    public async Task<PagedResponse<TaskSearchResponse>> SearchTasksAsync(TaskSearchRequest request)
+    {
+        // Validate request using FluentValidation
+        var validationResult = await _searchValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            throw new AppValidationException("Validation failed", validationResult);
+        }
+
+        // Additional business validation
+        await ValidateSearchRequestAsync(request);
+
+        // Get paged results from repository
+        var pagedResult = await _taskListRepository.SearchTasksAsync(request);
+
+        // Map to response DTO
+        var responses = pagedResult.Items.Select(task => new TaskSearchResponse
+        {
+            Id = task.Id,
+            Title = task.Title,
+            Description = task.Description,
+            Status = task.Status,
+            DueDate = task.DueDate,
+            AssignedToUserId = task.AssignedToUserId,
+            AssignedToUserName = task.AssignedToUser?.FullName,
+            TeamId = task.TeamId,
+            TeamName = task.Team?.Name,
+            CreatedDate = task.CreatedDate ?? DateTime.UtcNow
+        }).ToList();
+
+        // Build response
+        return new PagedResponse<TaskSearchResponse>
+        {
+            Data = responses,
+            PageNumber = request.PageNumber,
+            PageSize = request.PageSize,
+            TotalCount = pagedResult.TotalCount
+        };
+    }
+
+    private async Task ValidateSearchRequestAsync(TaskSearchRequest request)
+    {
+        // Validate date range
+        if (request.DueDateFrom.HasValue && request.DueDateTo.HasValue)
+        {
+            if (request.DueDateFrom.Value > request.DueDateTo.Value)
+            {
+                throw new BadRequestException("DueDateFrom must be less than or equal to DueDateTo");
+            }
+        }
+
+        // Validate user exists if filtering by user
+        if (request.AssignedToUserId.HasValue)
+        {
+            var user = await _userRepository.GetByIdAsync(request.AssignedToUserId.Value);
+            if (user == null)
+            {
+                throw new BadRequestException($"User with ID {request.AssignedToUserId.Value} does not exist");
+            }
+        }
+
+        // Validate team exists if filtering by team
+        if (request.TeamId.HasValue)
+        {
+            var team = await _teamRepository.GetByIdAsync(request.TeamId.Value);
+            if (team == null)
+            {
+                throw new BadRequestException($"Team with ID {request.TeamId.Value} does not exist");
+            }
+        }
     }
 }

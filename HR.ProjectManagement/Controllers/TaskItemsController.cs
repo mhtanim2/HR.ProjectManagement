@@ -1,8 +1,8 @@
 ﻿using HR.ProjectManagement.DTOs;
 using HR.ProjectManagement.Services.Interfaces;
+using HR.ProjectManagement.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace HR.ProjectManagement.Controllers;
 
@@ -17,21 +17,13 @@ public class TaskItemsController : ControllerBase
         _taskItemService = taskItemService;
     }
 
-    private int GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-        if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
-            throw new UnauthorizedAccessException("User ID not found in token");
-        
-        return userId;
-    }
-
+    
     [HttpPost]
     [Authorize(Policy = "ManagerOrAdmin")]
     public async Task<ActionResult<TaskResponse>> Create([FromBody] CreateTaskRequest request)
     {
-        request.CreatedByUserId = GetCurrentUserId();
-        var task = await _taskItemService.CreateAsync(request);
+        var currentUserId = GetCurrentUserId();
+        var task = await _taskItemService.CreateAsync(request, currentUserId);
         return CreatedAtAction(nameof(GetById), new { id = task.Id }, task);
     }
 
@@ -120,4 +112,22 @@ public class TaskItemsController : ControllerBase
         var tasks = await _taskItemService.GetTasksByTeamAsync(teamId);
         return Ok(tasks);
     }
+
+    [HttpGet("search")]
+    [Authorize]
+    public async Task<ActionResult<PagedResponse<TaskSearchResponse>>> SearchTasks([FromQuery] TaskSearchRequest request)
+    {
+        var result = await _taskItemService.SearchTasksAsync(request);
+        return Ok(result);
+    }
+
+    private int GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(AuthConstants.NameIdentifierClaimType);
+        if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+            throw new UnauthorizedAccessException("User ID not found in token");
+
+        return userId;
+    }
+
 }

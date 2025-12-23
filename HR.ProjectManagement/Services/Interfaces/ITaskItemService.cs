@@ -5,7 +5,7 @@ namespace HR.ProjectManagement.Services.Interfaces;
 
 public interface ITaskItemService
 {
-    Task<TaskResponse> CreateAsync(CreateTaskRequest request);
+    Task<TaskResponse> CreateAsync(CreateTaskRequest request, int createdByUserId);
     Task<TaskResponse> UpdateAsync(int id, UpdateTaskRequest request);
     Task<TaskResponse> UpdateStatusAsync(int id, UpdateTaskStatusRequest request);
     Task<bool> DeleteAsync(int id);
@@ -16,4 +16,5 @@ public interface ITaskItemService
     Task<IReadOnlyList<TaskResponse>> GetTasksByUserAsync(int userId);
     Task<IReadOnlyList<TaskResponse>> GetTasksByTeamAsync(int teamId);
     Task<IReadOnlyList<TaskResponse>> GetTasksByStatusAsync(Status status);
+    Task<PagedResponse<TaskSearchResponse>> SearchTasksAsync(TaskSearchRequest request);
 }

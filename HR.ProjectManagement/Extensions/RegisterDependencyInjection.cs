@@ -1,6 +1,7 @@
 ﻿using HR.ProjectManagement.Contracts.Identity;
 using HR.ProjectManagement.Contracts.Persistence;
 using HR.ProjectManagement.DataContext;
+using HR.ProjectManagement.Middleware;
 using HR.ProjectManagement.Repositories;
 using HR.ProjectManagement.Services;
 using HR.ProjectManagement.Services.Interfaces;
@@ -71,6 +72,9 @@ public static class RegisterDependencyInjection
         services.AddScoped<ITaskItemService, TaskItemService>();
 
         services.AddValidatorsFromAssemblyContaining<LoginValidation>();
+
+        services.AddScoped<ApiResponseFilter>();
+
         return services;
     }
 }

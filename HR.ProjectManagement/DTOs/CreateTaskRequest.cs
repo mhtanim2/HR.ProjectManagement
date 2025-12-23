@@ -7,5 +7,5 @@ public class CreateTaskRequest
     public int AssignedToUserId { get; set; }
     public int TeamId { get; set; }
     public DateTime DueDate { get; set; }
-    public int CreatedByUserId { get; set; } // This should be set from current user context
+    // CreatedByUserId is set from JWT token in controller, not from request body
 }

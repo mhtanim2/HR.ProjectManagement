@@ -1,5 +1,6 @@
 using HR.ProjectManagement.Contracts.Persistence;
 using HR.ProjectManagement.DataContext;
+using HR.ProjectManagement.DTOs;
 using HR.ProjectManagement.Entities;
 using HR.ProjectManagement.Entities.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -106,5 +107,105 @@ public class TaskItemRepository : GenericRepository<TaskItem>, ITaskListReposito
         }
 
         return await query.ToListAsync();
+    }
+
+    public async Task<PagedResult<TaskItem>> SearchTasksAsync(TaskSearchRequest request)
+    {
+        // Build base query with includes
+        var query = _context.TaskItems
+            .Include(t => t.AssignedToUser)
+            .Include(t => t.CreatedByUser)
+            .Include(t => t.Team)
+            .AsQueryable();
+
+        // Apply filters
+        if (request.Status.HasValue)
+        {
+            query = query.Where(t => t.Status == request.Status.Value);
+        }
+
+        if (request.AssignedToUserId.HasValue)
+        {
+            query = query.Where(t => t.AssignedToUserId == request.AssignedToUserId.Value);
+        }
+
+        if (request.TeamId.HasValue)
+        {
+            query = query.Where(t => t.TeamId == request.TeamId.Value);
+        }
+
+        if (request.DueDateFrom.HasValue)
+        {
+            query = query.Where(t => t.DueDate >= request.DueDateFrom.Value);
+        }
+
+        if (request.DueDateTo.HasValue)
+        {
+            query = query.Where(t => t.DueDate <= request.DueDateTo.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var searchTerm = request.SearchTerm.Trim().ToLower();
+            query = query.Where(t =>
+                t.Title.ToLower().Contains(searchTerm) ||
+                (t.Description != null && t.Description.ToLower().Contains(searchTerm)));
+        }
+
+        // Get total count before pagination
+        var totalCount = await query.CountAsync();
+
+        // Apply sorting
+        query = ApplySorting(query, request.SortBy, request.SortDescending);
+
+        // Apply pagination
+        var items = await query
+            .Skip((request.PageNumber - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .AsNoTracking() // Read-only query optimization
+            .ToListAsync();
+
+        return new PagedResult<TaskItem>
+        {
+            Items = items,
+            TotalCount = totalCount
+        };
+    }
+
+    private IQueryable<TaskItem> ApplySorting(IQueryable<TaskItem> query, string? sortBy, bool descending)
+    {
+        var sortField = sortBy?.ToLower() switch
+        {
+            "title" => "Title",
+            "status" => "Status",
+            "duedate" => "DueDate",
+            "createddate" => "CreatedDate",
+            "assignedto" => "AssignedToUserId",
+            "team" => "TeamId",
+            _ => "DueDate" // Default sort
+        };
+
+        return (sortField, descending) switch
+        {
+            ("Title", true) => query.OrderByDescending(t => t.Title),
+            ("Title", false) => query.OrderBy(t => t.Title),
+
+            ("Status", true) => query.OrderByDescending(t => t.Status),
+            ("Status", false) => query.OrderBy(t => t.Status),
+
+            ("DueDate", true) => query.OrderByDescending(t => t.DueDate),
+            ("DueDate", false) => query.OrderBy(t => t.DueDate),
+
+            ("CreatedDate", true) => query.OrderByDescending(t => t.CreatedDate),
+            ("CreatedDate", false) => query.OrderBy(t => t.CreatedDate),
+
+            ("AssignedToUserId", true) => query.OrderByDescending(t => t.AssignedToUser.FullName),
+            ("AssignedToUserId", false) => query.OrderBy(t => t.AssignedToUser.FullName),
+
+            ("TeamId", true) => query.OrderByDescending(t => t.Team.Name),
+            ("TeamId", false) => query.OrderBy(t => t.Team.Name),
+
+            _ => query.OrderBy(t => t.DueDate) // Default
+        };
     }
 }

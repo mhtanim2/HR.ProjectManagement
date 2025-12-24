@@ -232,20 +232,15 @@ public class TaskItemService : ITaskItemService
 
     public async Task<PagedResponse<TaskSearchResponse>> SearchTasksAsync(TaskSearchRequest request)
     {
-        // Validate request using FluentValidation
         var validationResult = await _searchValidator.ValidateAsync(request);
         if (!validationResult.IsValid)
-        {
             throw new AppValidationException("Validation failed", validationResult);
-        }
+        
 
-        // Additional business validation
         await ValidateSearchRequestAsync(request);
 
-        // Get paged results from repository
         var pagedResult = await _taskListRepository.SearchTasksAsync(request);
 
-        // Map to response DTO
         var responses = pagedResult.Items.Select(task => new TaskSearchResponse
         {
             Id = task.Id,

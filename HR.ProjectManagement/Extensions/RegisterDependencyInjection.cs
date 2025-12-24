@@ -14,6 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
 using FluentValidation;
+using HR.ProjectManagement.Exceptions;
 
 namespace HR.ProjectManagement.Extentions;
 
@@ -45,10 +46,10 @@ public static class RegisterDependencyInjection
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
 
-                    ValidIssuer = configuration["Jwt:Issuer"],
-                    ValidAudience = configuration["Jwt:Audience"],
+                    ValidIssuer = configuration["Jwt:Issuer"] ?? throw new AuthenticationException("jwt Issuer not configured"),
+                    ValidAudience = configuration["Jwt:Audience"] ?? throw new AuthenticationException("JWT Audience not configured"),
                     IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!)
+                        Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!?? throw new AuthenticationException("JWT Key not configured"))
                     ),
 
                     RoleClaimType = ClaimTypes.Role,
@@ -60,6 +61,7 @@ public static class RegisterDependencyInjection
         {
             options.AddPolicy(SD.AdminOnly, p => p.RequireRole(SD.Admin));
             options.AddPolicy(SD.ManagerOrAdmin, p => p.RequireRole(SD.Manager, SD.Admin));
+            options.AddPolicy(SD.ManagerOnly, p => p.RequireRole(SD.Manager));
         });
 
         services.AddScoped<IUserRepository, UserRepository>();
@@ -68,7 +70,7 @@ public static class RegisterDependencyInjection
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<ITeamService, TeamService>();
 
-        services.AddScoped<ITaskListRepository, TaskItemRepository>();
+        services.AddScoped<ITaskListRepository, TaskListRepository>();
         services.AddScoped<ITaskItemService, TaskItemService>();
 
         services.AddValidatorsFromAssemblyContaining<LoginValidation>();

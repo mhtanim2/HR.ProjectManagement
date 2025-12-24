@@ -56,7 +56,7 @@ public class TaskItemsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Policy = "ManagerOrAdmin")]
+    [Authorize(Policy = SD.ManagerOrAdmin)]
     public async Task<ActionResult<TaskResponse>> Update(int id, [FromBody] UpdateTaskRequest request)
     {
         var task = await _taskItemService.UpdateAsync(id, request);

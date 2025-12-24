@@ -9,6 +9,7 @@ public static class SD
     public const string Manager = "Manager";
     public const string Employee = "Employee";
     public const string AdminOnly = "AdminOnly";
+    public const string ManagerOnly = "ManagerOnly";
     public const string ManagerOrAdmin = "ManagerOrAdmin";
     public const string ApplicationDatabaseConnectionString= "ApplicationDatabaseConnectionString";
     // Seeded Admin User Details

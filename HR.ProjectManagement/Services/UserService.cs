@@ -61,35 +61,29 @@ public class UserService : IUserService
 
     public async Task<UserResponse> UpdateAsync(int id, UpdateUserRequest request)
     {
-        // Basic validation first
         var validationResult = await _updateUserValidator.ValidateAsync(request);
+        
         if (!validationResult.IsValid)
-        {
             throw new BadRequestException("Validation failed", validationResult);
-        }
+        
 
         var existingUser = await _userRepository.GetByIdAsync(id);
+        
         if (existingUser == null)
-        {
             throw new NotFoundException("User", id);
-        }
+        
 
-        // Check if email is already used by another user (business validation)
         if (await _userRepository.IsAnyUserAvailableByEmailExcept(id, request.Email))
-        {
             throw new BadRequestException($"Email '{request.Email}' is already in use by another user");
-        }
+        
 
-        // Update properties
         existingUser.FullName = request.FullName;
         existingUser.Email = request.Email;
         existingUser.Role = request.Role;
 
-        // Update password if provided
         if (!string.IsNullOrWhiteSpace(request.Password))
-        {
             existingUser.PasswordHash = _passwordHasher.Hash(request.Password);
-        }
+        
 
         await _userRepository.UpdateAsync(existingUser);
         await _unitOfWork.SaveChangesAsync();

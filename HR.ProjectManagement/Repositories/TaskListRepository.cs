@@ -3,13 +3,14 @@ using HR.ProjectManagement.DataContext;
 using HR.ProjectManagement.DTOs;
 using HR.ProjectManagement.Entities;
 using HR.ProjectManagement.Entities.Enums;
+using HR.ProjectManagement.QueryExtensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace HR.ProjectManagement.Repositories;
 
-public class TaskItemRepository : GenericRepository<TaskItem>, ITaskListRepository
+public class TaskListRepository : GenericRepository<TaskItem>, ITaskListRepository
 {
-    public TaskItemRepository(ApplicationDBContext context) : base(context)
+    public TaskListRepository(ApplicationDBContext context) : base(context)
     {
     }
 
@@ -111,52 +112,21 @@ public class TaskItemRepository : GenericRepository<TaskItem>, ITaskListReposito
 
     public async Task<PagedResult<TaskItem>> SearchTasksAsync(TaskSearchRequest request)
     {
-        // Build base query with includes
-        var query = _context.TaskItems
+        IQueryable<TaskItem> query = _context.TaskItems
             .Include(t => t.AssignedToUser)
             .Include(t => t.CreatedByUser)
             .Include(t => t.Team)
-            .AsQueryable();
+            .AsNoTracking();
 
-        // Apply filters
-        if (request.Status.HasValue)
-        {
-            query = query.Where(t => t.Status == request.Status.Value);
-        }
+        query = query
+            .ApplySearch(request.SearchTerm)
+            .ApplyFilters(request)
+            .ApplySorting(request);
 
-        if (request.AssignedToUserId.HasValue)
-        {
-            query = query.Where(t => t.AssignedToUserId == request.AssignedToUserId.Value);
-        }
-
-        if (request.TeamId.HasValue)
-        {
-            query = query.Where(t => t.TeamId == request.TeamId.Value);
-        }
-
-        if (request.DueDateFrom.HasValue)
-        {
-            query = query.Where(t => t.DueDate >= request.DueDateFrom.Value);
-        }
-
-        if (request.DueDateTo.HasValue)
-        {
-            query = query.Where(t => t.DueDate <= request.DueDateTo.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            var searchTerm = request.SearchTerm.Trim().ToLower();
-            query = query.Where(t =>
-                t.Title.ToLower().Contains(searchTerm) ||
-                (t.Description != null && t.Description.ToLower().Contains(searchTerm)));
-        }
-
-        // Get total count before pagination
+       
         var totalCount = await query.CountAsync();
 
-        // Apply sorting
-        query = ApplySorting(query, request.SortBy, request.SortDescending);
+        //query = ApplySorting(query, request.SortBy, request.SortDescending);
 
         // Apply pagination
         var items = await query

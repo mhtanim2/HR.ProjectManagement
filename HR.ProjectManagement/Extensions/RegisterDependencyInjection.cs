@@ -73,6 +73,8 @@ public static class RegisterDependencyInjection
         services.AddScoped<ITaskListRepository, TaskListRepository>();
         services.AddScoped<ITaskItemService, TaskItemService>();
 
+        services.AddScoped<ICurrentUserService,CurrentUserService>();
+
         services.AddValidatorsFromAssemblyContaining<LoginValidation>();
 
         services.AddScoped<ApiResponseFilter>();

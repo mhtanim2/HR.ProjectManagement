@@ -1,14 +1,16 @@
-﻿using HR.ProjectManagement.Contracts.Identity;
+﻿using FluentValidation;
+using HR.ProjectManagement.Contracts.Identity;
 using HR.ProjectManagement.Contracts.Persistence;
 using HR.ProjectManagement.DTOs;
 using HR.ProjectManagement.Entities;
 using HR.ProjectManagement.Entities.Enums;
 using HR.ProjectManagement.Exceptions;
 using HR.ProjectManagement.Services.Interfaces;
+using HR.ProjectManagement.Utils;
 using HR.ProjectManagement.Validations.UserValidations;
 using Mapster;
 using Microsoft.AspNetCore.Http;
-using FluentValidation;
+using System.Security.Claims;
 
 namespace HR.ProjectManagement.Services;
 
@@ -27,7 +29,8 @@ public class UserService : IUserService
         IPasswordHasher passwordHasher,
         IHttpContextAccessor httpContextAccessor,
         IValidator<CreateUserRequest> createUserValidator,
-        IValidator<UpdateUserRequest> updateUserValidator)
+        IValidator<UpdateUserRequest> updateUserValidator
+        )
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
@@ -37,9 +40,9 @@ public class UserService : IUserService
         _updateUserValidator = updateUserValidator;
     }
 
+    
     public async Task<UserResponse> CreateAsync(CreateUserRequest request)
     {
-        // Validate input
         var validationResult = await _createUserValidator.ValidateAsync(request);
         if (!validationResult.IsValid)
             throw new BadRequestException("Validation failed", validationResult);

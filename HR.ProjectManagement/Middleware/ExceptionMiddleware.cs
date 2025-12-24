@@ -1,6 +1,5 @@
 ﻿using HR.ProjectManagement.DTOs;
 using HR.ProjectManagement.Exceptions;
-using HR.ProjectManagement.Utils;
 using System.Net;
 
 namespace HR.ProjectManagement.Middleware;
@@ -77,6 +76,11 @@ public class ExceptionMiddleware
                 statusCode = HttpStatusCode.Forbidden;
                 message = "Access denied";
                 error = unauthorizedAccessException.Message;
+                break;
+            case SecurityException securityException:
+                statusCode = HttpStatusCode.Unauthorized;
+                message = "Invalid user Id claim";
+                error = securityException.Message;
                 break;
             default:
                 statusCode = HttpStatusCode.InternalServerError;

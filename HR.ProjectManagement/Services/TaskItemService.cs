@@ -4,7 +4,6 @@ using HR.ProjectManagement.Entities;
 using HR.ProjectManagement.Entities.Enums;
 using HR.ProjectManagement.Exceptions;
 using HR.ProjectManagement.Services.Interfaces;
-using HR.ProjectManagement.Validations.TaskValidations;
 using Mapster;
 using FluentValidation;
 using AppValidationException = HR.ProjectManagement.Exceptions.ValidationException;
@@ -237,7 +236,7 @@ public class TaskItemService : ITaskItemService
             throw new AppValidationException("Validation failed", validationResult);
         
 
-        await ValidateSearchRequestAsync(request);
+        await ValidateBusinessRulesAsync(request);
 
         var pagedResult = await _taskListRepository.SearchTasksAsync(request);
 
@@ -265,25 +264,17 @@ public class TaskItemService : ITaskItemService
         };
     }
 
-    private async Task ValidateSearchRequestAsync(TaskSearchRequest request)
+    private async Task ValidateBusinessRulesAsync(TaskSearchRequest request)
     {
-        // Validate date range
-        if (request.DueDateFrom.HasValue && request.DueDateTo.HasValue)
-        {
-            if (request.DueDateFrom.Value > request.DueDateTo.Value)
-            {
-                throw new BadRequestException("DueDateFrom must be less than or equal to DueDateTo");
-            }
-        }
+       
 
         // Validate user exists if filtering by user
         if (request.AssignedToUserId.HasValue)
         {
             var user = await _userRepository.GetByIdAsync(request.AssignedToUserId.Value);
             if (user == null)
-            {
                 throw new BadRequestException($"User with ID {request.AssignedToUserId.Value} does not exist");
-            }
+            
         }
 
         // Validate team exists if filtering by team
@@ -291,9 +282,8 @@ public class TaskItemService : ITaskItemService
         {
             var team = await _teamRepository.GetByIdAsync(request.TeamId.Value);
             if (team == null)
-            {
                 throw new BadRequestException($"Team with ID {request.TeamId.Value} does not exist");
-            }
+            
         }
     }
 }

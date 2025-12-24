@@ -11,10 +11,13 @@ namespace HR.ProjectManagement.Controllers;
 public class TaskItemsController : ControllerBase
 {
     private readonly ITaskItemService _taskItemService;
+    private readonly ICurrentUserService _currentUser;
 
-    public TaskItemsController(ITaskItemService taskItemService)
+    public TaskItemsController(ITaskItemService taskItemService,
+        ICurrentUserService currentUser)
     {
         _taskItemService = taskItemService;
+        _currentUser = currentUser;
     }
 
     
@@ -22,7 +25,7 @@ public class TaskItemsController : ControllerBase
     [Authorize(Policy = "ManagerOrAdmin")]
     public async Task<ActionResult<TaskResponse>> Create([FromBody] CreateTaskRequest request)
     {
-        var currentUserId = GetCurrentUserId();
+        var currentUserId = _currentUser.UserId;
         var task = await _taskItemService.CreateAsync(request, currentUserId);
         return CreatedAtAction(nameof(GetById), new { id = task.Id }, task);
     }
@@ -67,7 +70,7 @@ public class TaskItemsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<TaskResponse>> UpdateStatus(int id, [FromBody] UpdateTaskStatusRequest request)
     {
-        var currentUserId = GetCurrentUserId();
+        var currentUserId = _currentUser.UserId;
         var task = await _taskItemService.GetByIdAsync(id);
 
         if (task == null)
@@ -92,7 +95,7 @@ public class TaskItemsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<IReadOnlyList<TaskResponse>>> GetMyTasks()
     {
-        var currentUserId = GetCurrentUserId();
+        var currentUserId = _currentUser.UserId;
         var tasks = await _taskItemService.GetMyTasksAsync(currentUserId);
         return Ok(tasks);
     }
@@ -120,14 +123,4 @@ public class TaskItemsController : ControllerBase
         var result = await _taskItemService.SearchTasksAsync(request);
         return Ok(result);
     }
-
-    private int GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(AuthConstants.NameIdentifierClaimType);
-        if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
-            throw new UnauthorizedAccessException("User ID not found in token");
-
-        return userId;
-    }
-
 }

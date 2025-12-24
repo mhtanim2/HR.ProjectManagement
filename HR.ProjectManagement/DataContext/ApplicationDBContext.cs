@@ -1,13 +1,19 @@
 ﻿using HR.ProjectManagement.Entities;
+using HR.ProjectManagement.Entities.Common;
+using HR.ProjectManagement.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace HR.ProjectManagement.DataContext;
 
 public class ApplicationDBContext : DbContext
 {
-    public ApplicationDBContext(DbContextOptions<ApplicationDBContext> options) : base(options)
+    private readonly ICurrentUserService _currentUser;
+
+    public ApplicationDBContext(DbContextOptions<ApplicationDBContext> options, ICurrentUserService currentUser) : base(options)
     {
+        _currentUser = currentUser;
     }
+
     public DbSet<User> Users => Set<User>();
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<TaskItem> TaskItems => Set<TaskItem>();
@@ -62,7 +68,6 @@ public class ApplicationDBContext : DbContext
             .HasIndex(rt => rt.Token)
             .IsUnique();
 
-        // PasswordReset configuration
         modelBuilder.Entity<PasswordReset>()
             .HasIndex(pr => pr.Token)
             .IsUnique();
@@ -70,7 +75,6 @@ public class ApplicationDBContext : DbContext
         modelBuilder.Entity<PasswordReset>()
             .HasIndex(pr => new { pr.Email, pr.IsUsed });
 
-        // TaskItem indexes for search performance
         modelBuilder.Entity<TaskItem>()
             .HasIndex(t => t.Status);
 
@@ -87,4 +91,21 @@ public class ApplicationDBContext : DbContext
             .HasIndex(t => new { t.Status, t.DueDate });
     }
 
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var entry in base.ChangeTracker.Entries<BaseEntity>()
+            .Where(q => q.State == EntityState.Added || q.State == EntityState.Modified))
+        {
+            entry.Entity.LastModifiedDate = DateTime.Now;
+            entry.Entity.ModifiedBy = _currentUser.UserId;
+            if (entry.State == EntityState.Added)
+            {
+                entry.Entity.CreatedDate = DateTime.Now;
+                entry.Entity.CreatedBy = _currentUser.UserId;
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
+    }
 }

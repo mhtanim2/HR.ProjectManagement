@@ -152,7 +152,7 @@ public class TaskListRepository : GenericRepository<TaskItem>, ITaskListReposito
             "createddate" => "CreatedDate",
             "assignedto" => "AssignedToUserId",
             "team" => "TeamId",
-            _ => "DueDate" // Default sort
+            _ => "DueDate"
         };
 
         return (sortField, descending) switch

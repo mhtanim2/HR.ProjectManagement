@@ -1,6 +1,5 @@
 ﻿using HR.ProjectManagement.DTOs;
 using HR.ProjectManagement.Exceptions;
-using Newtonsoft.Json;
 using System.Net;
 
 namespace HR.ProjectManagement.Middleware;
@@ -99,9 +98,11 @@ public class ExceptionMiddleware
             errors
         );
 
-        var logMessage = JsonConvert.SerializeObject(errorResponse);
-        _logger.LogError(ex, logMessage);
+        /*        var logMessage = JsonSerializer.Serialize(errorResponse);
+                _logger.LogError(ex, logMessage);
+        */
 
+        _logger.LogError(ex, $"Request failed with status {errorResponse.StatusCode}. Error: {errorResponse.Message}, Details: {errorResponse.Errors}");
         await httpContext.Response.WriteAsJsonAsync(errorResponse);
     }
 }

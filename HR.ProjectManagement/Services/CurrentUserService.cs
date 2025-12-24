@@ -1,6 +1,7 @@
-﻿using HR.ProjectManagement.Services.Interfaces;
+﻿using HR.ProjectManagement.Exceptions;
+using HR.ProjectManagement.Services.Interfaces;
 using HR.ProjectManagement.Utils;
-using System.Security;
+
 
 namespace HR.ProjectManagement.Services;
 
@@ -25,8 +26,8 @@ public class CurrentUserService : ICurrentUserService
                 .FindFirst(AuthConstants.NameIdentifierClaimType);
 
             if (userIdClaim == null)
-                throw new UnauthorizedAccessException("User is not authenticated.");
-
+                throw new UnauthorizedException("User is not authenticated.");
+            
             if (!int.TryParse(userIdClaim.Value, out var userId))
                 throw new SecurityException("Invalid user id claim.");
 

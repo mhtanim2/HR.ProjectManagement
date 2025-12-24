@@ -1,5 +1,6 @@
 ﻿using HR.ProjectManagement.DTOs;
 using HR.ProjectManagement.Exceptions;
+using Newtonsoft.Json;
 using System.Net;
 
 namespace HR.ProjectManagement.Middleware;
@@ -7,12 +8,12 @@ namespace HR.ProjectManagement.Middleware;
 public class ExceptionMiddleware
 {
     private readonly RequestDelegate _next;
-    //private readonly ILogger<ExceptionMiddleware> _logger;
+    private readonly ILogger<ExceptionMiddleware> _logger;
 
-    public ExceptionMiddleware(RequestDelegate next/*, ILogger<ExceptionMiddleware> logger*/)
+    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
     {
         _next = next;
-        //this._logger = logger;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext httpContext)
@@ -97,6 +98,9 @@ public class ExceptionMiddleware
             error,
             errors
         );
+
+        var logMessage = JsonConvert.SerializeObject(errorResponse);
+        _logger.LogError(ex, logMessage);
 
         await httpContext.Response.WriteAsJsonAsync(errorResponse);
     }

@@ -1,7 +1,4 @@
-﻿using HR.ProjectManagement.Entities;
-using HR.ProjectManagement.Entities.Enums;
-
-namespace HR.ProjectManagement.Utils;
+﻿namespace HR.ProjectManagement.Utils;
 
 public static class SD
 {
@@ -24,8 +21,11 @@ public static class SD
     public const string EmployeeEmail = "Employee@demo.com";
     public const string EmployeeFullname = "Employee User";
     public const string EmployeePasswordHash = "$2a$11$KbaFgoihjNW8m64tM40SUutX.GjVL9ME6CbSDYDE9NfZP.uxtTRBq";
+    public const string CorsAccess = "all";
+
 }
 /*
+ docker run -d --name Hr_PM_pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=ProjectManagement -p 5432:5432 -v postgres-data:/var/lib/postgresql/data postgres:15
  Console.WriteLine(BCrypt.Net.BCrypt.HashPassword("Admin123!"));
 Console.WriteLine(BCrypt.Net.BCrypt.HashPassword("Manager123!"));
 Console.WriteLine(BCrypt.Net.BCrypt.HashPassword("Employee123!"));

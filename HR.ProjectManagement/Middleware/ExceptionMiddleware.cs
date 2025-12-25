@@ -7,12 +7,12 @@ namespace HR.ProjectManagement.Middleware;
 public class ExceptionMiddleware
 {
     private readonly RequestDelegate _next;
-    //private readonly ILogger<ExceptionMiddleware> _logger;
+    private readonly ILogger<ExceptionMiddleware> _logger;
 
-    public ExceptionMiddleware(RequestDelegate next/*, ILogger<ExceptionMiddleware> logger*/)
+    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
     {
         _next = next;
-        //this._logger = logger;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext httpContext)
@@ -98,6 +98,11 @@ public class ExceptionMiddleware
             errors
         );
 
+        /*        var logMessage = JsonSerializer.Serialize(errorResponse);
+                _logger.LogError(ex, logMessage);
+        */
+
+        _logger.LogError(ex, $"Request failed with status {errorResponse.StatusCode}. Error: {errorResponse.Message}, Details: {errorResponse.Errors}");
         await httpContext.Response.WriteAsJsonAsync(errorResponse);
     }
 }

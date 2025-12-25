@@ -6,11 +6,7 @@ using HR.ProjectManagement.Entities;
 using HR.ProjectManagement.Entities.Enums;
 using HR.ProjectManagement.Exceptions;
 using HR.ProjectManagement.Services.Interfaces;
-using HR.ProjectManagement.Utils;
-using HR.ProjectManagement.Validations.UserValidations;
 using Mapster;
-using Microsoft.AspNetCore.Http;
-using System.Security.Claims;
 
 namespace HR.ProjectManagement.Services;
 
@@ -19,7 +15,6 @@ public class UserService : IUserService
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IValidator<CreateUserRequest> _createUserValidator;
     private readonly IValidator<UpdateUserRequest> _updateUserValidator;
 
@@ -27,7 +22,6 @@ public class UserService : IUserService
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
         IPasswordHasher passwordHasher,
-        IHttpContextAccessor httpContextAccessor,
         IValidator<CreateUserRequest> createUserValidator,
         IValidator<UpdateUserRequest> updateUserValidator
         )
@@ -35,7 +29,6 @@ public class UserService : IUserService
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
-        _httpContextAccessor = httpContextAccessor;
         _createUserValidator = createUserValidator;
         _updateUserValidator = updateUserValidator;
     }
@@ -69,24 +62,20 @@ public class UserService : IUserService
         if (!validationResult.IsValid)
             throw new BadRequestException("Validation failed", validationResult);
         
-
         var existingUser = await _userRepository.GetByIdAsync(id);
         
         if (existingUser == null)
             throw new NotFoundException("User", id);
         
-
         if (await _userRepository.IsAnyUserAvailableByEmailExcept(id, request.Email))
             throw new BadRequestException($"Email '{request.Email}' is already in use by another user");
         
-
         existingUser.FullName = request.FullName;
         existingUser.Email = request.Email;
         existingUser.Role = request.Role;
 
         if (!string.IsNullOrWhiteSpace(request.Password))
             existingUser.PasswordHash = _passwordHasher.Hash(request.Password);
-        
 
         await _userRepository.UpdateAsync(existingUser);
         await _unitOfWork.SaveChangesAsync();

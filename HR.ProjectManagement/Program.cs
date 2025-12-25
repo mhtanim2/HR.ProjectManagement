@@ -1,16 +1,20 @@
 using HR.ProjectManagement.Extentions;
 using HR.ProjectManagement.Middleware;
-using Microsoft.AspNetCore.Http.Json;
+using HR.ProjectManagement.Utils;
+using Serilog;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.UseSerilog((context, loggerConfig) => loggerConfig
+    .WriteTo.Console()
+    .ReadFrom.Configuration(context.Configuration));
+
 builder.Services.AddApplicationServices(builder.Configuration);
 
 builder.Services.AddControllers(options =>
 {
-    // Add ApiResponseFilter to all controllers
     options.Filters.Add<ApiResponseFilter>();
 })
 .AddJsonOptions(options =>
@@ -19,6 +23,14 @@ builder.Services.AddControllers(options =>
     options.JsonSerializerOptions.WriteIndented = true;
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 });
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(SD.CorsAccess, builder => builder.AllowAnyOrigin()
+    .AllowAnyHeader()
+    .AllowAnyMethod());
+});
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -39,8 +51,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseSerilogRequestLogging();
+
 app.UseHttpsRedirection();
 
+app.UseCors(SD.CorsAccess);
 app.UseAuthentication();
 app.UseAuthorization();
 

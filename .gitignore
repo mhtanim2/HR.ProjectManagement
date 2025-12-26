@@ -10,7 +10,7 @@
 *.userosscache
 *.sln.docstates
 *.env
-
+TESTING_BEST_PRACTICES.md 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

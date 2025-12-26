@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using HR.ProjectManagement.Contracts.Identity;
 using HR.ProjectManagement.Contracts.Persistence;
 using HR.ProjectManagement.DTOs;
@@ -6,16 +6,16 @@ using HR.ProjectManagement.Entities;
 using HR.ProjectManagement.Entities.Enums;
 using HR.ProjectManagement.Exceptions;
 using HR.ProjectManagement.Services;
+using HR.ProjectManagement.UnitTests.Helpers;
 using HR.ProjectManagement.UnitTests.Mocks;
 using Moq;
 using Xunit;
 
 namespace HR.ProjectManagement.UnitTests.Services;
 
-public class UserServiceTest
+public class UserServiceTest : ServiceTestBase
 {
     private readonly Mock<IUserRepository> _mockRepository;
-    private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<IPasswordHasher> _mockPasswordHasher;
     private readonly Mock<IValidator<CreateUserRequest>> _mockCreateValidator;
     private readonly Mock<IValidator<UpdateUserRequest>> _mockUpdateValidator;
@@ -24,28 +24,24 @@ public class UserServiceTest
     public UserServiceTest()
     {
         _mockRepository = MockUserRepository.GetMockUserRepository();
-        _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockPasswordHasher = new Mock<IPasswordHasher>();
         _mockCreateValidator = new Mock<IValidator<CreateUserRequest>>();
         _mockUpdateValidator = new Mock<IValidator<UpdateUserRequest>>();
 
-        // Setup password hasher
         _mockPasswordHasher.Setup(p => p.Hash(It.IsAny<string>())).Returns("hashed_password");
-
-        // Setup validators to pass by default
-        _mockCreateValidator.Setup(v => v.ValidateAsync(It.IsAny<CreateUserRequest>(), default))
-            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
-        _mockUpdateValidator.Setup(v => v.ValidateAsync(It.IsAny<UpdateUserRequest>(), default))
-            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
+        ValidatorTestHelper.SetupValidatorToPass(_mockCreateValidator);
+        ValidatorTestHelper.SetupValidatorToPass(_mockUpdateValidator);
 
         _service = new UserService(
             _mockRepository.Object,
-            _mockUnitOfWork.Object,
+            MockUnitOfWork.Object,
             _mockPasswordHasher.Object,
             _mockCreateValidator.Object,
             _mockUpdateValidator.Object
         );
     }
+
+    #region Query Tests
 
     [Fact]
     public async Task GetAllAsync_ReturnsAllUsers()
@@ -76,14 +72,7 @@ public class UserServiceTest
     public async Task GetByIdAsync_NonExistingId_ReturnsNull()
     {
         // Arrange
-        var emptyRepo = MockUserRepository.GetMockUserRepositoryEmpty();
-        var service = new UserService(
-            emptyRepo.Object,
-            _mockUnitOfWork.Object,
-            _mockPasswordHasher.Object,
-            _mockCreateValidator.Object,
-            _mockUpdateValidator.Object
-        );
+        var service = CreateServiceWithEmptyRepository();
 
         // Act
         var result = await service.GetByIdAsync(999);
@@ -103,6 +92,35 @@ public class UserServiceTest
         Assert.Single(result);
         Assert.Equal("Employee User", result[0].FullName);
     }
+
+    [Fact]
+    public async Task GetByEmailAsync_ExistingEmail_ReturnsUser()
+    {
+        // Act
+        var result = await _service.GetByEmailAsync("admin@example.com");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("admin@example.com", result.Email);
+        Assert.Equal("Admin User", result.FullName);
+    }
+
+    [Fact]
+    public async Task GetByEmailAsync_NonExistingEmail_ReturnsNull()
+    {
+        // Arrange
+        var service = CreateServiceWithEmptyRepository();
+
+        // Act
+        var result = await service.GetByEmailAsync("nonexistent@example.com");
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    #endregion
+
+    #region Create Tests
 
     [Fact]
     public async Task CreateAsync_ValidRequest_ReturnsUserResponse()
@@ -126,9 +144,13 @@ public class UserServiceTest
         Assert.Equal(Role.Employee, result.Role);
 
         _mockRepository.Verify(r => r.CreateAsync(It.IsAny<User>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+        MockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
         _mockPasswordHasher.Verify(p => p.Hash("password123"), Times.Once);
     }
+
+    #endregion
+
+    #region Update Tests
 
     [Fact]
     public async Task UpdateAsync_ExistingUser_ReturnsUpdatedUser()
@@ -152,7 +174,7 @@ public class UserServiceTest
         Assert.Equal(Role.Manager, result.Role);
 
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<User>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+        MockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
@@ -162,7 +184,7 @@ public class UserServiceTest
         var request = new UpdateUserRequest
         {
             FullName = "Test User",
-            Email = "manager@example.com", // Email already exists
+            Email = "manager@example.com",
             Role = Role.Employee
         };
 
@@ -178,15 +200,7 @@ public class UserServiceTest
     public async Task UpdateAsync_NonExistingId_ThrowsNotFoundException()
     {
         // Arrange
-        var emptyRepo = MockUserRepository.GetMockUserRepositoryEmpty();
-        var service = new UserService(
-            emptyRepo.Object,
-            _mockUnitOfWork.Object,
-            _mockPasswordHasher.Object,
-            _mockCreateValidator.Object,
-            _mockUpdateValidator.Object
-        );
-
+        var service = CreateServiceWithEmptyRepository();
         var request = new UpdateUserRequest
         {
             FullName = "Test User",
@@ -200,6 +214,10 @@ public class UserServiceTest
         );
     }
 
+    #endregion
+
+    #region Delete Tests
+
     [Fact]
     public async Task DeleteAsync_ExistingUser_ReturnsTrue()
     {
@@ -209,21 +227,14 @@ public class UserServiceTest
         // Assert
         Assert.True(result);
         _mockRepository.Verify(r => r.DeleteAsync(It.IsAny<User>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+        MockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
     public async Task DeleteAsync_NonExistingId_ThrowsNotFoundException()
     {
         // Arrange
-        var emptyRepo = MockUserRepository.GetMockUserRepositoryEmpty();
-        var service = new UserService(
-            emptyRepo.Object,
-            _mockUnitOfWork.Object,
-            _mockPasswordHasher.Object,
-            _mockCreateValidator.Object,
-            _mockUpdateValidator.Object
-        );
+        var service = CreateServiceWithEmptyRepository();
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -231,35 +242,21 @@ public class UserServiceTest
         );
     }
 
-    [Fact]
-    public async Task GetByEmailAsync_ExistingEmail_ReturnsUser()
-    {
-        // Act
-        var result = await _service.GetByEmailAsync("admin@example.com");
+    #endregion
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal("admin@example.com", result.Email);
-        Assert.Equal("Admin User", result.FullName);
-    }
+    #region Helper Methods
 
-    [Fact]
-    public async Task GetByEmailAsync_NonExistingEmail_ReturnsNull()
+    private UserService CreateServiceWithEmptyRepository()
     {
-        // Arrange
         var emptyRepo = MockUserRepository.GetMockUserRepositoryEmpty();
-        var service = new UserService(
+        return new UserService(
             emptyRepo.Object,
-            _mockUnitOfWork.Object,
+            MockUnitOfWork.Object,
             _mockPasswordHasher.Object,
             _mockCreateValidator.Object,
             _mockUpdateValidator.Object
         );
-
-        // Act
-        var result = await service.GetByEmailAsync("nonexistent@example.com");
-
-        // Assert
-        Assert.Null(result);
     }
+
+    #endregion
 }

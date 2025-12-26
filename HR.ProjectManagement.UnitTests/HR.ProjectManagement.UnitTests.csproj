@@ -20,12 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="Xunit" />
+    <ProjectReference Include="..\HR.ProjectManagement\HR.ProjectManagement.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Mocks\" />
-    <Folder Include="Services\" />
+    <Using Include="Xunit" />
   </ItemGroup>
 
 </Project>

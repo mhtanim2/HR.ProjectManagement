@@ -1,0 +1,30 @@
+name: Docker Build and Test
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build Docker image
+      run: docker-compose build
+
+    - name: Run Unit Tests
+      run: docker-compose -f docker-compose.test.yml run --rm unit-tests
+
+    - name: Run Integration Tests
+      run: docker-compose -f docker-compose.test.yml run --rm integration-tests
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: test-results/

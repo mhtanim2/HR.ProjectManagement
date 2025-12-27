@@ -1,0 +1,85 @@
+trigger:
+  branches:
+    include:
+    - master
+    - develop
+
+pr:
+  branches:
+    include:
+    - master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  dockerRegistry: 'your-registry.azurecr.io'
+  imageName: 'hrprojectmanagement'
+
+stages:
+- stage: Build
+  displayName: 'Build and Test'
+  jobs:
+  - job: Build
+    displayName: 'Build Job'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Install .NET SDK'
+      inputs:
+        packageType: 'sdk'
+        version: '10.0.x'
+
+    - script: |
+        docker-compose -f docker-compose.test.yml build
+      displayName: 'Build Test Images'
+
+    - script: |
+        docker-compose -f docker-compose.test.yml run --rm all-tests
+      displayName: 'Run Tests'
+
+    - task: PublishTestResults@2
+      displayName: 'Publish Test Results'
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: '**/*.trx'
+        searchFolder: '$(System.DefaultWorkingDirectory)/test-results'
+
+    - task: Docker@2
+      displayName: 'Build API Image'
+      inputs:
+        command: build
+        dockerfile: 'HR.ProjectManagement/Dockerfile'
+        tags: |
+          $(dockerRegistry)/$(imageName):$(Build.BuildId)
+          $(dockerRegistry)/$(imageName):latest
+
+    - task: Docker@2
+      displayName: 'Push Image'
+      inputs:
+        command: push
+        repository: $(dockerRegistry)/$(imageName)
+        tags: |
+          $(Build.BuildId)
+          latest
+
+- stage: Deploy
+  displayName: 'Deploy to Production'
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  jobs:
+  - deployment: Deploy
+    displayName: 'Deploy Job'
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DockerCompose@0
+            displayName: 'Deploy via Docker Compose'
+            inputs:
+              containerregistrytype: 'Container Registry'
+              dockerRegistry: '$(dockerRegistry)'
+              dockerComposeFile: 'docker-compose.prod.yml'
+              action: 'Run a Docker Compose command'
+              dockerComposeCommand: 'up -d'

@@ -1,0 +1,19 @@
+services:
+  hr-projectmanagement-db:
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+
+  hr.projectmanagement:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__ApplicationDatabaseConnectionString=Server=hr-projectmanagement-db;Port=5432;Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASSWORD};Include Error Detail=true
+    ports:
+      - "80:8080"
+    restart: always
+
+volumes:
+  postgres-prod-data:

@@ -9,8 +9,15 @@
 *.user
 *.userosscache
 *.sln.docstates
-*.env
-TESTING_BEST_PRACTICES.md 
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Test results
+test-results/
+coverage/ 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

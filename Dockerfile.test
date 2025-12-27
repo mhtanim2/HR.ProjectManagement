@@ -1,0 +1,20 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Copy all project files
+COPY ["HR.ProjectManagement/HR.ProjectManagement.csproj", "HR.ProjectManagement/"]
+COPY ["HR.ProjectManagement.UnitTests/HR.ProjectManagement.UnitTests.csproj", "HR.ProjectManagement.UnitTests/"]
+COPY ["HR.ProjectManagement.Persistence.IntegrationTests/HR.ProjectManagement.Persistence.IntegrationTests.csproj", "HR.ProjectManagement.Persistence.IntegrationTests/"]
+
+# Restore dependencies
+RUN dotnet restore "HR.ProjectManagement/HR.ProjectManagement.csproj"
+RUN dotnet restore "HR.ProjectManagement.UnitTests/HR.ProjectManagement.UnitTests.csproj"
+RUN dotnet restore "HR.ProjectManagement.Persistence.IntegrationTests/HR.ProjectManagement.Persistence.IntegrationTests.csproj"
+
+# Copy everything else
+COPY . .
+
+WORKDIR "/src"
+
+# Test runner entrypoint
+ENTRYPOINT ["dotnet", "test"]

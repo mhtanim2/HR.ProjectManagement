@@ -1,0 +1,12 @@
+services:
+  hr-projectmanagement-db:
+    image: postgres:15
+
+  hr.projectmanagement:
+    image: ${DOCKER_REGISTRY-}hrprojectmanagement
+    build:
+      context: .
+      dockerfile: HR.ProjectManagement/Dockerfile
+
+volumes:
+  postgres-data:
